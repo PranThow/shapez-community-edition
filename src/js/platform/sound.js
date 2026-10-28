@@ -364,6 +364,13 @@ class MusicInstance extends MusicInstanceInterface {
                 },
 
                 onload: () => {
+                    if (!(this.howl.duration() > 0)) {
+                        // Howler loops a zero length track as play -> _ended -> play, which
+                        // recurses until the stack overflows and takes the main menu down with it
+                        logger.warn(this, "Music", this.url, "reported no duration, skipping it");
+                        this.howl.unload();
+                        this.howl = null;
+                    }
                     resolve();
                 },
                 onloaderror: (id, err) => {

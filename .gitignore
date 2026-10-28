@@ -55,3 +55,6 @@ translations/tmp
 gulp/additional_build_files
 
 electron/dist
+
+# iOS
+ios/.sdk

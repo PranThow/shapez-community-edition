@@ -1,4 +1,4 @@
-import { globalConfig } from "../../core/config";
+import { globalConfig, SUPPORT_TOUCH } from "../../core/config";
 import { DrawParameters } from "../../core/draw_parameters";
 import { Signal } from "../../core/signal";
 import { MOD_SIGNALS } from "../../mods/mod_signals";
@@ -18,6 +18,7 @@ import { HUDModalDialogs } from "./parts/modal_dialogs";
 import { enumNotificationType } from "./parts/notifications";
 import { HUDSettingsMenu } from "./parts/settings_menu";
 import { HUDShapeTooltip } from "./parts/shape_tooltip";
+import { HUDTouchControls } from "./parts/touch_controls";
 import { HUDVignetteOverlay } from "./parts/vignette_overlay";
 
 export class GameHUD {
@@ -71,6 +72,10 @@ export class GameHUD {
 
         if (G_IS_DEV && globalConfig.debug.renderChanges) {
             this.parts.changesDebugger = new HUDChangesDebugger(this.root);
+        }
+
+        if (SUPPORT_TOUCH) {
+            this.parts.touchControls = new HUDTouchControls(this.root);
         }
 
         if (this.root.app.settings.getAllSettings().vignette) {

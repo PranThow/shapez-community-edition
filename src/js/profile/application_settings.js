@@ -2,6 +2,7 @@
 import { Application } from "../application";
 /* typehints:end */
 
+import { IS_MOBILE } from "../core/config";
 import { ExplainedResult } from "../core/explained_result";
 import { Logger } from "../core/logging";
 import { ReadWriteProxy } from "../core/read_write_proxy";
@@ -189,7 +190,7 @@ function initializeSettings() {
             },
             /**
              * @param {Application} app
-             */ app => true
+             */ app => app.platformWrapper.getSupportsFullscreen()
         ),
 
         new BoolSetting(
@@ -300,18 +301,18 @@ class SettingsStorage {
         this.language = "auto-detect";
         this.autosaveInterval = "two_minutes";
 
-        this.alwaysMultiplace = false;
+        this.alwaysMultiplace = IS_MOBILE;
         this.shapeTooltipAlwaysOn = false;
         this.offerHints = true;
         this.enableTunnelSmartplace = true;
         this.vignette = true;
-        this.compactBuildingInfo = false;
+        this.compactBuildingInfo = IS_MOBILE;
         this.disableCutDeleteWarnings = false;
         this.rotationByBuilding = true;
         this.clearCursorOnDeleteWhilePlacing = true;
         this.displayChunkBorders = false;
         this.pickMinerOnPatch = true;
-        this.enableMousePan = true;
+        this.enableMousePan = !IS_MOBILE;
 
         this.enableColorBlindHelper = false;
 

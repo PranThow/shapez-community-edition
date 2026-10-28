@@ -46,6 +46,7 @@
 @use "ingame_hud/puzzle_play_metadata";
 @use "ingame_hud/puzzle_complete_notification";
 @use "ingame_hud/puzzle_next";
+@use "ingame_hud/touch_controls";
 
 // prettier-ignore
 $elements:
@@ -84,6 +85,8 @@ ingame_HUD_Waypoints_Hint,
 ingame_HUD_WatermarkClicker,
 ingame_HUD_ColorBlindBelowTileHelper,
 ingame_HUD_SandboxController,
+ingame_HUD_TouchControls,
+ingame_HUD_TouchPill,
 
 // Overlays
 ingame_HUD_BetaOverlay,

@@ -26,6 +26,12 @@ export class HUDMassSelector extends BaseHUDPart {
         this.currentSelectionEnd = null;
         this.selectedUids = new Set();
 
+        /**
+         * Set by the touch controls: select without holding ctrl, adding to the selection
+         * @type {boolean}
+         */
+        this.forceSelect = false;
+
         this.root.signals.entityQueuedForDestroy.add(this.onEntityDestroyed, this);
         this.root.hud.signals.pasteBlueprintRequested.add(this.clearSelection, this);
 
@@ -207,7 +213,10 @@ export class HUDMassSelector extends BaseHUDPart {
      * @param {enumMouseButton} mouseButton
      */
     onMouseDown(pos, mouseButton) {
-        if (!this.root.keyMapper.getBinding(KEYMAPPINGS.massSelect.massSelectStart).pressed) {
+        if (
+            !this.forceSelect &&
+            !this.root.keyMapper.getBinding(KEYMAPPINGS.massSelect.massSelectStart).pressed
+        ) {
             return;
         }
 
@@ -215,7 +224,10 @@ export class HUDMassSelector extends BaseHUDPart {
             return;
         }
 
-        if (!this.root.keyMapper.getBinding(KEYMAPPINGS.massSelect.massSelectSelectMultiple).pressed) {
+        if (
+            !this.forceSelect &&
+            !this.root.keyMapper.getBinding(KEYMAPPINGS.massSelect.massSelectSelectMultiple).pressed
+        ) {
             // Start new selection
             this.selectedUids = new Set();
         }

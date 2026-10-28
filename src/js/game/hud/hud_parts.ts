@@ -31,6 +31,7 @@ import type { HUDSettingsMenu } from "./parts/settings_menu.js";
 import type { HUDShapeTooltip } from "./parts/shape_tooltip.js";
 import type { HUDShapeViewer } from "./parts/shape_viewer.js";
 import type { HUDShop } from "./parts/shop.js";
+import type { HUDTouchControls } from "./parts/touch_controls.js";
 import type { HUDStatistics } from "./parts/statistics.js";
 import type { HUDPartTutorialHints } from "./parts/tutorial_hints.js";
 import type { HUDTutorialVideoOffer } from "./parts/tutorial_video_offer.js";
@@ -53,6 +54,8 @@ export interface HudParts {
     settingsMenu: HUDSettingsMenu;
     debugInfo: HUDDebugInfo;
     dialogs: HUDModalDialogs;
+
+    touchControls?: HUDTouchControls;
 
     // Dev
     entityDebugger?: HUDEntityDebugger;

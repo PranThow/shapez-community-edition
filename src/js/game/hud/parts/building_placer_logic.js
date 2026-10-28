@@ -99,6 +99,12 @@ export class HUDBuildingPlacerLogic extends BaseHUDPart {
          */
         this.currentDirectionLockSideIndeterminate = true;
 
+        /**
+         * Set by the touch controls to use the belt planner without a shift key
+         * @type {boolean}
+         */
+        this.forceDirectionLock = false;
+
         this.initializeBindings();
     }
 
@@ -192,7 +198,8 @@ export class HUDBuildingPlacerLogic extends BaseHUDPart {
         return (
             metaBuilding &&
             metaBuilding.getHasDirectionLockAvailable(this.currentVariant.get()) &&
-            this.root.keyMapper.getBinding(KEYMAPPINGS.placementModifiers.lockBeltDirection).pressed
+            (this.forceDirectionLock ||
+                this.root.keyMapper.getBinding(KEYMAPPINGS.placementModifiers.lockBeltDirection).pressed)
         );
     }
 
@@ -281,11 +288,15 @@ export class HUDBuildingPlacerLogic extends BaseHUDPart {
 
     /**
      * Tries to rotate the current building
+     * @param {boolean=} inverse Rotate counter-clockwise, defaults to the shift key state
      */
-    tryRotate() {
+    tryRotate(inverse) {
         const selectedBuilding = this.currentMetaBuilding.get();
         if (selectedBuilding) {
-            if (this.root.keyMapper.getBinding(KEYMAPPINGS.placement.rotateInverseModifier).pressed) {
+            if (
+                inverse ??
+                this.root.keyMapper.getBinding(KEYMAPPINGS.placement.rotateInverseModifier).pressed
+            ) {
                 this.currentBaseRotation = (this.currentBaseRotation + 270) % 360;
             } else {
                 this.currentBaseRotation = (this.currentBaseRotation + 90) % 360;

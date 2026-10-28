@@ -1,4 +1,4 @@
-import { globalConfig } from "../core/config";
+import { globalConfig, IS_MOBILE } from "../core/config";
 import { round1Digit, round2Digits } from "./utils";
 
 /**
@@ -6,7 +6,10 @@ import { round1Digit, round2Digits } from "./utils";
  * @returns {number}
  */
 export function getDeviceDPI() {
-    return window.devicePixelRatio || 1;
+    const dpi = window.devicePixelRatio || 1;
+    // ponytail: 3x phones render 2.25x the pixels of 2x for little visible gain and a lot of heat;
+    // make it a setting if anyone misses the extra sharpness
+    return IS_MOBILE ? Math.min(dpi, 2) : dpi;
 }
 
 /**

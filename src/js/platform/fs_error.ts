@@ -6,7 +6,8 @@ export class FsError extends Error {
 
     constructor(message?: string, options?: ErrorOptions) {
         super(message, options);
-        Error.captureStackTrace(this, FsError);
+        // V8 only; older JavaScriptCore (iOS) lacks it
+        Error.captureStackTrace?.(this, FsError);
         this.name = "FsError";
 
         // Take the code from the error message, quite ugly

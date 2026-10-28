@@ -1,4 +1,4 @@
-import { globalConfig } from "./core/config";
+import { globalConfig, IS_MOBILE } from "./core/config";
 import { Logger } from "./core/logging";
 import { LANGUAGES } from "./languages";
 
@@ -8,6 +8,35 @@ const logger = new Logger("translations");
 import baseTranslations from "./built-temp/base-en.json";
 
 export const T = baseTranslations;
+
+if (IS_MOBILE) {
+    // The English texts talk about mice and keys; other languages keep their own wording
+    const hints = T.ingame.interactiveTutorial.hints;
+    hints["1_2_conveyor"] =
+        "Connect the extractor with a <strong>conveyor belt</strong> to your hub!<br><br>Tip: <strong>Drag your finger</strong> to draw the belt!";
+    hints["1_3_expand"] =
+        "This is <strong>NOT</strong> an idle game! Build more extractors and belts to finish the goal quicker.<br><br>Tip: Buildings stay selected, so just keep tapping, and use <strong>Rotate</strong> to turn them.";
+    hints["2_3_more_cutters"] =
+        "Good job! Now place <strong>2 more cutters</strong> to speed up this slow process!<br><br>PS: Tap a building on the map and choose <strong>Pick</strong> to build more of it.";
+    hints["3_1_rectangles"] =
+        "Now let's extract some rectangles! <strong>Build 4 extractors</strong> and connect them to the hub.<br><br>PS: <strong>Hold, then drag</strong> a belt to draw a straight line!";
+    hints["21_2_switch_to_wires"] =
+        "Switch to the wires layer with the <strong>Wires</strong> button!<br><br>Then <strong>connect all four inputs</strong> of the painter with cables!";
+    hints["21_4_press_button"] =
+        "<strong>Tap</strong> the switch to make it <strong>emit a truthy signal</strong> and thus activate the painter.<br><br>PS: You don't have to connect all inputs! Try wiring only two.";
+    hints["1_2_hold_and_drag"] = "Drag from here";
+
+    const rewards = T.storyRewards;
+    rewards.reward_rotator_ccw.desc =
+        "You have unlocked a variant of the <strong>rotator</strong> - It allows you to rotate shapes counter-clockwise! To build it, select the rotator and <strong>tap its variant</strong> on the right!";
+    rewards.reward_blueprints.desc =
+        "You can now <strong>copy and paste</strong> parts of your factory! Select an area (<strong>hold, then drag</strong>, or use the Select tool) and tap <strong>Copy</strong>.<br><br>Pasting it is <strong>not free</strong>, you need to produce <strong>blueprint shapes</strong> to afford it! (Those you just delivered).";
+    rewards.reward_wires_painter_and_levers.desc = rewards.reward_wires_painter_and_levers.desc.replace(
+        "press <strong>E</strong>",
+        "tap the <strong>Wires</strong> button"
+    );
+    T.mainMenu.noActiveSavegames = "No active savegames found - Tap play to start a new game!";
+}
 
 if (G_IS_DEV && globalConfig.debug.testTranslations) {
     // Replaces all translations by fake translations to see whats translated and what not

@@ -1,0 +1,282 @@
+@use "../mixins" as *;
+@use "../variables" as *;
+
+@use "sass:color";
+
+// Physical sizes so buttons stay thumb-sized on phones without ballooning on an iPad
+$tcSize: clamp(46px, 4.6rem, 60px);
+$tcGap: clamp(6px, 0.7rem, 10px);
+$tcEdge: clamp(10px, 1rem, 18px);
+$tcColumn: calc(#{$tcSize} + 2 * #{$tcEdge});
+
+.tcBtn {
+    position: relative;
+    width: $tcSize;
+    height: $tcSize;
+    flex: 0 0 auto;
+    border-radius: clamp(12px, 1.2rem, 16px);
+    background: rgba(255, 255, 255, 0.92);
+    color: #4f5363;
+    box-shadow: 0 2px 8px rgba(30, 35, 50, 0.16);
+    pointer-events: all;
+    cursor: pointer;
+    touch-action: none;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+
+    transition:
+        transform 0.1s ease-out,
+        background-color 0.12s,
+        color 0.12s;
+
+    svg {
+        width: 44%;
+        height: 44%;
+        pointer-events: none;
+    }
+
+    span {
+        font-family: $mainFont;
+        font-size: clamp(9px, 0.95rem, 11px);
+        line-height: 1;
+        pointer-events: none;
+    }
+
+    &.pressed {
+        transform: scale(0.9);
+    }
+
+    &.hidden {
+        display: none;
+    }
+
+    &.active {
+        background: $colorBlueBright;
+        color: #fff;
+    }
+
+    &.primary {
+        background: $colorGreenBright;
+        color: #fff;
+    }
+
+    &.danger {
+        color: $colorRedBright;
+    }
+
+    // Which way the next building will face
+    .direction {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 10px;
+        height: 10px;
+        transition: transform 0.15s ease-out;
+
+        &::before {
+            content: "";
+            position: absolute;
+            left: 1px;
+            top: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-bottom: 7px solid $colorBlueBright;
+        }
+    }
+
+    @include DarkThemeOverride {
+        background: rgba(color.adjust($darkModeGameBackground, $lightness: -8%, $space: hsl), 0.95);
+        color: #e6e8ef;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+        &.active {
+            background: $colorBlueBright;
+        }
+        &.primary {
+            background: $colorGreenBright;
+        }
+        &.danger {
+            color: color.adjust($colorRedBright, $lightness: 8%, $space: hsl);
+        }
+    }
+}
+
+#ingame_HUD_TouchControls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+
+    &.hidden {
+        display: none;
+    }
+
+    .column {
+        position: absolute;
+        bottom: $tcEdge;
+        display: flex;
+        flex-direction: column;
+        gap: $tcGap;
+
+        &.tools {
+            left: $tcEdge;
+        }
+        &.actions {
+            right: $tcEdge;
+        }
+    }
+
+    .hint {
+        position: absolute;
+        left: 50%;
+        bottom: calc(#{$tcEdge} + 6.5rem);
+        transform: translate(-50%, 0.6rem);
+        max-width: min(60vw, 46rem);
+        padding: 0.6rem 1.1rem;
+        border-radius: 1rem;
+
+        font-family: $mainFont;
+        font-size: clamp(11px, 1.15rem, 15px);
+        line-height: 1.35;
+        text-align: center;
+        color: #fff;
+        background: rgba(40, 44, 58, 0.82);
+
+        opacity: 0;
+        transition:
+            opacity 0.25s ease-out,
+            transform 0.25s ease-out;
+
+        &.visible {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+    }
+}
+
+#ingame_HUD_TouchPill {
+    position: fixed;
+    display: none;
+    gap: 2px;
+    padding: 4px;
+    border-radius: clamp(14px, 1.4rem, 18px);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 14px rgba(30, 35, 50, 0.22);
+    transform: translate(-50%, -100%);
+    pointer-events: all;
+
+    &.visible {
+        display: flex;
+    }
+    &.below {
+        transform: translate(-50%, 0);
+    }
+
+    .tcBtn {
+        width: clamp(50px, 5rem, 60px);
+        box-shadow: none;
+        background: transparent;
+    }
+
+    @include DarkThemeOverride {
+        background: rgba(color.adjust($darkModeGameBackground, $lightness: -8%, $space: hsl), 0.97);
+    }
+}
+
+// Touch layout: make room for the two thumb columns and enlarge the small desktop targets
+html.touch {
+    #ingame_Canvas {
+        touch-action: none;
+    }
+
+    #ingame_HUD_InteractiveTutorial,
+    #ingame_HUD_TutorialHints {
+        left: calc(#{$tcColumn}) !important;
+    }
+
+    #ingame_HUD_Notifications {
+        right: calc(#{$tcColumn});
+    }
+
+    #ingame_HUD_PlacerVariants {
+        right: calc(#{$tcColumn});
+
+        // "Press T to cycle": the variants are tappable instead
+        .explanation {
+            display: none;
+        }
+
+        .variant {
+            pointer-events: all;
+        }
+    }
+
+    #ingame_HUD_PlacementHints .hotkey,
+    #ingame_HUD_Waypoints_Hint {
+        display: none !important;
+    }
+
+    .ingame_buildingsToolbar .buildings {
+        .building.unlocked {
+            width: max(4rem, 44px);
+            height: max(4rem, 44px);
+        }
+        &.secondary .building.unlocked {
+            width: max(3rem, 40px);
+            height: max(3rem, 40px);
+        }
+    }
+
+    #ingame_HUD_GameMenu > button,
+    #ingame_HUD_GameMenu > .button {
+        width: max(3rem, 36px);
+        height: max(3rem, 36px);
+    }
+
+    * {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+    }
+    input,
+    textarea {
+        -webkit-user-select: text;
+    }
+}
+
+// iOS: the canvas runs edge to edge under the notch, everything else stays in the safe area
+html.p-ios {
+    body {
+        position: fixed;
+        top: env(safe-area-inset-top);
+        right: env(safe-area-inset-right);
+        bottom: env(safe-area-inset-bottom);
+        left: env(safe-area-inset-left);
+    }
+
+    #ingame_Canvas {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+    }
+
+    // Fixed would escape the safe area
+    #ingame_HUD_PlacementHints {
+        position: absolute;
+    }
+
+    .exitAppButton {
+        display: none !important;
+    }
+
+    &[data-theme="dark"] {
+        background: $darkModeGameBackground;
+    }
+}

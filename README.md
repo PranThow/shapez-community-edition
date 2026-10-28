@@ -77,6 +77,19 @@ and does not intend to provide compatibility for older clients.
     -   `$ARCH` is the target system architecture (`x64` or `arm64`)
 -   The build will be found under `build_output/standalone` as `shapez-...`.
 
+### iOS (iPhone / iPad)
+
+`ios/build.sh` builds an unsigned `.ipa` on Linux or macOS without Xcode: it builds the game,
+fetches an iOS SDK (headers and stubs only), compiles the small WKWebView wrapper in `ios/main.m`
+with clang + lld and packages `build_output/shapez-ce-<version>-ios.ipa`.
+Sign and install it with Feather, Sideloadly, AltStore or similar. Requires iOS 16.4+.
+
+-   Requirements: the prerequisites above, plus clang and lld 15+ and Python 3 with Pillow.
+-   Saves live in the app's Documents folder, visible in the Files app.
+-   Touch controls: one finger acts (tap to place, drag to draw belts), two fingers move and zoom.
+    Hold, then drag for the straight belt planner or a box selection. Tap a building to pick or delete it.
+    A quick two finger tap is "back". Select / Erase / Wires are on the left, context actions on the right.
+
 ### Building with Docker
 
 You can build without installing Node, Java, or ffmpeg on the host. From the repo root, build the image and run a package task with a volume so output appears in `build_output/` on your machine:

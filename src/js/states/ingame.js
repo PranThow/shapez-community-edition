@@ -1,4 +1,4 @@
-import { globalConfig } from "../core/config";
+import { globalConfig, IS_IOS_APP } from "../core/config";
 import { GameState } from "../core/game_state";
 import { Logger, logSection } from "../core/logging";
 import { waitNextFrame } from "../core/utils";
@@ -111,10 +111,11 @@ export class InGameState extends GameState {
     }
 
     onAppPause() {
-        // if (this.stage === stages.s10_gameRunning) {
-        //     logger.log("Saving because app got paused");
-        //     this.doSave();
-        // }
+        // iOS may kill a backgrounded app without warning, so save whenever we get hidden
+        if (IS_IOS_APP && this.stage === GAME_LOADING_STATES.s10_gameRunning) {
+            logger.log("Saving because app got paused");
+            this.doSave();
+        }
     }
 
     getHasFadeIn() {

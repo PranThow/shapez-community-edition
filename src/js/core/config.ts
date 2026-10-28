@@ -82,7 +82,9 @@ export const globalConfig = {
     debug,
 };
 
-export const IS_MOBILE = navigator.userAgentData.mobile;
+// The iOS wrapper registers this handler before any page script runs
+export const IS_IOS_APP = Boolean((window as any).webkit?.messageHandlers?.shapezIpc);
+export const IS_MOBILE = IS_IOS_APP || Boolean((navigator as any).userAgentData?.mobile);
 export const SUPPORT_TOUCH = IS_MOBILE;
 
 // Automatic calculations

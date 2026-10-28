@@ -2,8 +2,7 @@
 import { Application } from "../application";
 /* typehints:end */
 
-import { randomChoice } from "../core/utils";
-import { T } from "../translations";
+import { getRandomHint } from "./hints";
 
 export class GameLoadingOverlay {
     /**
@@ -65,7 +64,7 @@ export class GameLoadingOverlay {
      */
     internalAddHint(element) {
         const hint = document.createElement("span");
-        hint.innerHTML = randomChoice(T.tips);
+        hint.innerHTML = getRandomHint();
         hint.classList.add("prefab_GameHint");
         element.appendChild(hint);
     }

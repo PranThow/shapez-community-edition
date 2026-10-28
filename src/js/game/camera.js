@@ -1,5 +1,5 @@
 import { clickDetectorGlobals } from "../core/click_detector";
-import { globalConfig, SUPPORT_TOUCH } from "../core/config";
+import { globalConfig, IS_MOBILE } from "../core/config";
 import { Logger } from "../core/logging";
 import { Rectangle } from "../core/rectangle";
 import { Signal, STOP_PROPAGATION } from "../core/signal";
@@ -287,27 +287,24 @@ export class Camera extends BasicSerializableObject {
     }
 
     getIsMapOverlayActive() {
-        return this.zoomLevel < globalConfig.mapChunkOverviewMinZoom;
+        let threshold = globalConfig.mapChunkOverviewMinZoom;
+        if (IS_MOBILE) {
+            // Zoom is in CSS pixels, so a phone shows far fewer tiles at the same zoom level than a
+            // desktop. Scale the threshold so the overview starts at a similar number of visible tiles.
+            const shortSide = Math.min(this.root.gameWidth, this.root.gameHeight);
+            threshold *= clamp(shortSide / 1080, 0.45, 1);
+        }
+        return this.zoomLevel < threshold;
     }
 
     /**
      * Attaches all event listeners
      */
     internalInitEvents() {
-        this.eventListenerTouchStart = this.onTouchStart.bind(this);
-        this.eventListenerTouchEnd = this.onTouchEnd.bind(this);
-        this.eventListenerTouchMove = this.onTouchMove.bind(this);
         this.eventListenerMousewheel = this.onMouseWheel.bind(this);
         this.eventListenerMouseDown = this.onMouseDown.bind(this);
         this.eventListenerMouseMove = this.onMouseMove.bind(this);
         this.eventListenerMouseUp = this.onMouseUp.bind(this);
-
-        if (SUPPORT_TOUCH) {
-            this.root.canvas.addEventListener("touchstart", this.eventListenerTouchStart);
-            this.root.canvas.addEventListener("touchend", this.eventListenerTouchEnd);
-            this.root.canvas.addEventListener("touchcancel", this.eventListenerTouchEnd);
-            this.root.canvas.addEventListener("touchmove", this.eventListenerTouchMove);
-        }
 
         this.root.canvas.addEventListener("wheel", this.eventListenerMousewheel);
         this.root.canvas.addEventListener("mousedown", this.eventListenerMouseDown);
@@ -320,13 +317,6 @@ export class Camera extends BasicSerializableObject {
      * Cleans up all event listeners
      */
     cleanup() {
-        if (SUPPORT_TOUCH) {
-            this.root.canvas.removeEventListener("touchstart", this.eventListenerTouchStart);
-            this.root.canvas.removeEventListener("touchend", this.eventListenerTouchEnd);
-            this.root.canvas.removeEventListener("touchcancel", this.eventListenerTouchEnd);
-            this.root.canvas.removeEventListener("touchmove", this.eventListenerTouchMove);
-        }
-
         this.root.canvas.removeEventListener("wheel", this.eventListenerMousewheel);
         this.root.canvas.removeEventListener("mousedown", this.eventListenerMouseDown);
         this.root.canvas.removeEventListener("mousemove", this.eventListenerMouseMove);
@@ -531,137 +521,44 @@ export class Camera extends BasicSerializableObject {
     }
 
     /**
-     * Touch start handler
-     * @param {TouchEvent} event
+     * Applies one step of a two finger gesture: pans by the movement of the
+     * midpoint and zooms around it. Used by the touch controls.
+     * @param {Vector} lastA
+     * @param {Vector} lastB
+     * @param {Vector} newA
+     * @param {Vector} newB
      */
-    onTouchStart(event) {
-        if (event.cancelable) {
-            event.preventDefault();
-            // event.stopPropagation();
-        }
+    pinch(lastA, lastB, newA, newB) {
+        this.currentlyPinching = true;
+        this.currentlyMoving = false;
 
-        clickDetectorGlobals.lastTouchTime = performance.now();
-        this.touchPostMoveVelocity = new Vector(0, 0);
+        // IMPORTANT to do math max here to avoid NaN and causing an invalid zoom level
+        const difference = newA.distance(newB) / Math.max(0.001, lastA.distance(lastB));
+        assert(Number.isFinite(difference), "Invalid pinch difference: " + difference);
 
-        if (event.touches.length === 1) {
-            const touch = event.touches[0];
-            this.combinedSingleTouchStartHandler(touch.clientX, touch.clientY);
-        } else if (event.touches.length === 2) {
-            // if (this.pinchPreHandler.dispatch() === STOP_PROPAGATION) {
-            //     // Something prevented pinching
-            //     return false;
-            // }
+        const oldCenter = lastA.centerPoint(lastB);
+        const newCenter = newA.centerPoint(newB);
 
-            const touch1 = event.touches[0];
-            const touch2 = event.touches[1];
-            this.currentlyMoving = false;
-            this.currentlyPinching = true;
-            this.lastPinchPositions = [
-                new Vector(touch1.clientX, touch1.clientY),
-                new Vector(touch2.clientX, touch2.clientY),
-            ];
-        }
-        return false;
-    }
+        // Pan with the midpoint, and remember the velocity so a two finger fling keeps gliding
+        const movement = oldCenter.sub(newCenter).divideScalar(this.zoomLevel);
+        this.center = this.center.add(movement);
+        this.touchPostMoveVelocity = this.touchPostMoveVelocity
+            .multiplyScalar(velocitySmoothing)
+            .add(movement.multiplyScalar(1 - velocitySmoothing));
 
-    /**
-     * Touch move handler
-     * @param {TouchEvent} event
-     */
-    onTouchMove(event) {
-        if (event.cancelable) {
-            event.preventDefault();
-            // event.stopPropagation();
-        }
-
-        clickDetectorGlobals.lastTouchTime = performance.now();
-
-        if (event.touches.length === 1) {
-            const touch = event.touches[0];
-            this.combinedSingleTouchMoveHandler(touch.clientX, touch.clientY);
-        } else if (event.touches.length === 2) {
-            if (this.currentlyPinching) {
-                const touch1 = event.touches[0];
-                const touch2 = event.touches[1];
-
-                const newPinchPositions = [
-                    new Vector(touch1.clientX, touch1.clientY),
-                    new Vector(touch2.clientX, touch2.clientY),
-                ];
-
-                // Get distance of taps last time and now
-                const lastDistance = this.lastPinchPositions[0].distance(this.lastPinchPositions[1]);
-                const thisDistance = newPinchPositions[0].distance(newPinchPositions[1]);
-
-                // IMPORTANT to do math max here to avoid NaN and causing an invalid zoom level
-                const difference = thisDistance / Math.max(0.001, lastDistance);
-
-                // Find old center of zoom
-                const oldCenter = this.lastPinchPositions[0].centerPoint(this.lastPinchPositions[1]);
-
-                // Find new center of zoom
-                let center = newPinchPositions[0].centerPoint(newPinchPositions[1]);
-
-                // Compute movement
-                const movement = oldCenter.sub(center);
-                this.center.x += movement.x / this.zoomLevel;
-                this.center.y += movement.y / this.zoomLevel;
-
-                // Compute zoom
-                center = center.sub(new Vector(this.root.gameWidth / 2, this.root.gameHeight / 2));
-
-                // Apply zoom
-                assert(
-                    Number.isFinite(difference),
-                    "Invalid pinch difference: " +
-                        difference +
-                        "(last=" +
-                        lastDistance +
-                        ", new = " +
-                        thisDistance +
-                        ")"
-                );
-                this.zoomLevel *= difference;
-
-                // Stick to pivot point
-                const correcture = center.multiplyScalar(difference - 1).divideScalar(this.zoomLevel);
-
-                this.center = this.center.add(correcture);
-                this.lastPinchPositions = newPinchPositions;
-                this.userInteraction.dispatch(USER_INTERACT_MOVE);
-
-                // Since we zoomed, abort any programmed zooming
-                if (this.desiredZoom) {
-                    this.desiredZoom = null;
-                }
-            }
-        }
-
-        // Clamp everything afterwards
+        // Zoom, sticking to the pivot point
+        const prevZoom = this.zoomLevel;
+        this.zoomLevel *= difference;
         this.clampZoomLevel();
-        return false;
-    }
+        const pivot = newCenter.sub(new Vector(this.root.gameWidth / 2, this.root.gameHeight / 2));
+        this.center = this.center.add(
+            pivot.multiplyScalar(this.zoomLevel / prevZoom - 1).divideScalar(this.zoomLevel)
+        );
 
-    /**
-     * Touch end and cancel handler
-     * @param {TouchEvent=} event
-     */
-    onTouchEnd(event) {
-        if (event) {
-            if (event.cancelable) {
-                event.preventDefault();
-                // event.stopPropagation();
-            }
-        }
-
-        clickDetectorGlobals.lastTouchTime = performance.now();
-        if (event.changedTouches.length === 0) {
-            logger.warn("Touch end without changed touches");
-        }
-
-        const touch = event.changedTouches[0];
-        this.combinedSingleTouchStopHandler(touch.clientX, touch.clientY);
-        return false;
+        this.desiredZoom = null;
+        this.desiredCenter = null;
+        this.clampToBounds();
+        this.userInteraction.dispatch(USER_INTERACT_MOVE);
     }
 
     /**
@@ -675,7 +572,14 @@ export class Camera extends BasicSerializableObject {
             // Somebody else captured it
             return;
         }
+        this.beginPan(pos);
+    }
 
+    /**
+     * Starts dragging the map from the given screen position
+     * @param {Vector} pos
+     */
+    beginPan(pos) {
         this.touchPostMoveVelocity = new Vector(0, 0);
         this.currentlyMoving = true;
         this.lastMovingPosition = pos;
@@ -695,7 +599,14 @@ export class Camera extends BasicSerializableObject {
             // Somebody else captured it
             return;
         }
+        this.panTo(pos);
+    }
 
+    /**
+     * Drags the map so the point grabbed in beginPan follows the given screen position
+     * @param {Vector} pos
+     */
+    panTo(pos) {
         if (!this.currentlyMoving) {
             return false;
         }
@@ -726,6 +637,14 @@ export class Camera extends BasicSerializableObject {
      * Internal touch stop handler
      */
     combinedSingleTouchStopHandler(x, y) {
+        this.endPan();
+        this.upPostHandler.dispatch(new Vector(x, y));
+    }
+
+    /**
+     * Releases a pan or pinch, keeping the velocity for the glide
+     */
+    endPan() {
         if (this.currentlyMoving || this.currentlyPinching) {
             this.currentlyMoving = false;
             this.currentlyPinching = false;
@@ -736,7 +655,6 @@ export class Camera extends BasicSerializableObject {
             this.userInteraction.dispatch(USER_INTERACT_TOUCHEND);
             this.didMoveSinceTouchStart = false;
         }
-        this.upPostHandler.dispatch(new Vector(x, y));
     }
 
     /**

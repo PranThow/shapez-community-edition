@@ -1,5 +1,6 @@
 import "./core/assert";
 import "./core/polyfills";
+import "./platform/ios";
 
 import "./mods/modloader";
 

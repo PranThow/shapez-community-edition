@@ -2,7 +2,8 @@
 import { Application } from "../application";
 /* typehints:end */
 
-import { IS_MOBILE } from "../core/config";
+import { IS_IOS_APP, IS_MOBILE } from "../core/config";
+import { nativePost } from "./ios";
 import { Logger } from "../core/logging";
 import { clamp } from "../core/utils";
 
@@ -16,11 +17,12 @@ export class PlatformWrapperImplElectron {
 
     initialize() {
         document.documentElement.classList.add("p-" + this.getId());
+        document.documentElement.classList.toggle("touch", IS_MOBILE);
         return Promise.resolve();
     }
 
     getId() {
-        return "electron";
+        return IS_IOS_APP ? "ios" : "electron";
     }
 
     getSupportsRestart() {
@@ -33,6 +35,10 @@ export class PlatformWrapperImplElectron {
      */
     openExternalLink(url) {
         logger.log(this, "Opening external:", url);
+        if (IS_IOS_APP) {
+            nativePost({ type: "openURL", url });
+            return;
+        }
         location.replace(url);
     }
 
@@ -55,19 +61,17 @@ export class PlatformWrapperImplElectron {
      * Returns the UI scale, called on every resize
      * @returns {number} */
     getUiScale() {
-        if (IS_MOBILE) {
-            return 1;
-        }
-
         const avgDims = Math.min(this.app.screenWidth, this.app.screenHeight);
-        return clamp((avgDims / 1000.0) * 1.9, 0.1, 10);
+        const scale = clamp((avgDims / 1000.0) * 1.9, 0.1, 10);
+        // Phones: the desktop formula makes text ~8px; keep tap targets usable
+        return IS_MOBILE ? Math.max(1.05, scale) : scale;
     }
 
     /**
      * Returns whether this platform supports a toggleable fullscreen
      */
     getSupportsFullscreen() {
-        return true;
+        return !IS_IOS_APP;
     }
 
     /**
@@ -79,7 +83,7 @@ export class PlatformWrapperImplElectron {
     }
 
     getSupportsAppExit() {
-        return true;
+        return !IS_IOS_APP;
     }
 
     /**

@@ -17,6 +17,12 @@ export class HUDShapeTooltip extends BaseHUDPart {
 
         this.isPlacingBuilding = false;
 
+        /**
+         * Set by the touch controls while a building is inspected (there is no alt key on a phone)
+         * @type {boolean}
+         */
+        this.forceActive = false;
+
         this.root.signals.entityQueuedForDestroy.add(() => {
             this.currentEntity = null;
         }, this);
@@ -30,6 +36,7 @@ export class HUDShapeTooltip extends BaseHUDPart {
         const hudParts = this.root.hud.parts;
 
         const active =
+            this.forceActive ||
             this.root.app.settings.getSetting("shapeTooltipAlwaysOn") ||
             this.root.keyMapper.getBinding(KEYMAPPINGS.ingame.showShapeTooltip).pressed;
 

@@ -36,7 +36,7 @@ export class MainMenuState extends GameState {
                 <button class="exitAppButton" aria-label="Exit App"></button>
             </div>
 
-            <video autoplay muted loop class="fullscreenBackgroundVideo">
+            <video autoplay muted loop playsinline class="fullscreenBackgroundVideo">
                 <source src="res/bg_render.webm" type="video/webm">
             </video>
 
