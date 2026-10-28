@@ -114,6 +114,8 @@ export class InputDistributor {
         window.addEventListener("mouseup", this.handleKeyMouseUp.bind(this));
 
         window.addEventListener("blur", this.handleBlur.bind(this));
+        // The iOS app and Safari do not always blur when the app goes to the background
+        document.addEventListener("visibilitychange", () => document.hidden && this.handleBlur());
 
         document.addEventListener("paste", this.handlePaste.bind(this));
     }
@@ -172,7 +174,20 @@ export class InputDistributor {
             event.preventDefault();
         }
 
-        const isInitial = !this.keysDown.has(keyCode);
+        // iPadOS can drop a keyup (e.g. when the key is let go after a Cmd shortcut or while the
+        // app loses focus), and the key would then never count as a fresh press again
+        const isInitial = event instanceof KeyboardEvent ? !event.repeat : !this.keysDown.has(keyCode);
+        // Same for modifiers, which every event reports reliably: a stuck Shift or Ctrl would
+        // otherwise keep rotating backwards or selecting
+        for (const [code, held] of [
+            [16, event.shiftKey],
+            [17, event.ctrlKey],
+            [18, event.altKey],
+        ] as const) {
+            if (!held) {
+                this.keysDown.delete(code);
+            }
+        }
         this.keysDown.add(keyCode);
 
         if (

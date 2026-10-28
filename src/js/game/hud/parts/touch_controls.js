@@ -126,6 +126,18 @@ export class HUDTouchControls extends BaseHUDPart {
             this.lastTapPlaced = null;
         });
         this.root.signals.editModeChanged.add(() => this.hidePill());
+
+        // A hardware keyboard's R does what the Rotate button does. After a tap there is no
+        // cursor ghost on screen, so the stock handler would only turn an invisible preview.
+        const keys = this.root.keyMapper;
+        keys.getBinding(KEYMAPPINGS.placement.rotateWhilePlacing).addToTop(() => {
+            if (!this.blueprint && !this.placer.currentMetaBuilding.get()) {
+                return;
+            }
+            this.rotate(keys.getBinding(KEYMAPPINGS.placement.rotateInverseModifier).pressed);
+            this.uiKey = null;
+            return STOP_PROPAGATION;
+        });
     }
 
     cleanup() {

@@ -89,6 +89,10 @@ Sign and install it with Feather, Sideloadly, AltStore or similar. Requires iOS 
 -   Touch controls: one finger acts (tap to place, drag to draw belts), two fingers move and zoom.
     Hold, then drag for the straight belt planner or a box selection. Tap a building to pick or delete it.
     A quick two finger tap is "back". Select / Erase / Wires are on the left, context actions on the right.
+-   Keyboard, mouse and trackpad work alongside touch (e.g. an iPad with a Magic Keyboard): R turns the
+    building you just tapped, two finger scroll moves the map, pinch zooms, a two finger click deletes.
+    Settings → User interface → Touch controls switches the touch layout between Automatic / On / Off,
+    Settings → Advanced → Scroll to move picks between scrolling to move or to zoom.
 
 ### Single HTML file
 

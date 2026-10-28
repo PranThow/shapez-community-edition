@@ -308,6 +308,15 @@ export class Camera extends BasicSerializableObject {
         this.root.canvas.addEventListener("mousemove", this.eventListenerMouseMove);
         window.addEventListener("mouseup", this.eventListenerMouseUp);
         // this.root.canvas.addEventListener("mouseout", this.eventListenerMouseUp);
+
+        // Trackpads in Safari (iPad and Mac): pinch arrives as gesture events, and a two finger
+        // click may only arrive as "contextmenu". Removed together in cleanup().
+        this.trackpadListeners = new AbortController();
+        const options = { signal: this.trackpadListeners.signal };
+        this.root.canvas.addEventListener("gesturestart", ev => this.onGesture(ev, "start"), options);
+        this.root.canvas.addEventListener("gesturechange", ev => this.onGesture(ev, "change"), options);
+        this.root.canvas.addEventListener("gestureend", ev => this.onGesture(ev, "end"), options);
+        this.root.canvas.addEventListener("contextmenu", ev => this.onContextMenu(ev), options);
     }
 
     /**
@@ -319,6 +328,7 @@ export class Camera extends BasicSerializableObject {
         this.root.canvas.removeEventListener("mousemove", this.eventListenerMouseMove);
         window.removeEventListener("mouseup", this.eventListenerMouseUp);
         // this.root.canvas.removeEventListener("mouseout", this.eventListenerMouseUp);
+        this.trackpadListeners.abort();
     }
 
     /**
@@ -426,6 +436,7 @@ export class Camera extends BasicSerializableObject {
             return;
         }
 
+        this.lastMouseDownTime = performance.now();
         this.touchPostMoveVelocity = new Vector(0, 0);
         if (event.button === 0) {
             this.combinedSingleTouchStartHandler(event.clientX, event.clientY);
@@ -490,6 +501,30 @@ export class Camera extends BasicSerializableObject {
             event.preventDefault();
             // event.stopPropagation();
         }
+
+        if (event.ctrlKey) {
+            // A trackpad pinch (Chrome, Edge, Firefox) or Ctrl + wheel. Safari sends gesture
+            // events for the pinch instead, so skip while one runs.
+            if (!this.gestureStartZoom) {
+                const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
+                this.zoomAround(
+                    this.root.app.mousePosition,
+                    this.zoomLevel * Math.exp(-clamp(pixels, -50, 50) * 0.01)
+                );
+            }
+            return false;
+        }
+
+        if (this.root.app.settings.getAllSettings().scrollPansMap) {
+            // Two finger scroll moves the map like a page; lines/pages for wheels that report them
+            const unit = [1, 16, this.root.gameHeight][event.deltaMode] ?? 1;
+            this.center.x += (event.deltaX * unit) / this.zoomLevel;
+            this.center.y += (event.deltaY * unit) / this.zoomLevel;
+            this.desiredCenter = null;
+            this.clampToBounds();
+            return false;
+        }
+
         const prevZoom = this.zoomLevel;
 
         const scale = 1 + 0.15 * this.root.app.settings.getScrollWheelSensitivity();
@@ -515,6 +550,61 @@ export class Camera extends BasicSerializableObject {
         }
 
         return false;
+    }
+
+    /**
+     * Zooms keeping the given screen point fixed (the screen center without one, or when
+     * "zoom towards cursor" is off)
+     * @param {Vector|null} screenPos
+     * @param {number} zoom
+     */
+    zoomAround(screenPos, zoom) {
+        if (!screenPos || !this.root.app.settings.getAllSettings().zoomToCursor) {
+            screenPos = new Vector(this.root.gameWidth / 2, this.root.gameHeight / 2);
+        }
+        const anchor = this.screenToWorld(screenPos);
+        this.zoomLevel = zoom;
+        this.clampZoomLevel();
+        this.desiredZoom = null;
+        // Move the center so the anchor ends up under the same screen point again
+        this.center = this.center.add(anchor.sub(this.screenToWorld(screenPos)));
+        this.desiredCenter = null;
+    }
+
+    /**
+     * Safari pinch (trackpad on iPad and Mac). A pinch on the touch screen fires these as well,
+     * but the touch controls already handle that one.
+     * @param {Event & { scale: number, clientX: number, clientY: number }} event
+     * @param {"start"|"change"|"end"} phase
+     */
+    onGesture(event, phase) {
+        event.preventDefault(); // no page zoom
+        if (this.root.hud?.parts.touchControls?.touches.size) {
+            return;
+        }
+        if (phase === "start") {
+            this.gestureStartZoom = this.zoomLevel;
+        } else if (phase === "change" && this.gestureStartZoom) {
+            this.zoomAround(new Vector(event.clientX, event.clientY), this.gestureStartZoom * event.scale);
+        } else {
+            this.gestureStartZoom = null;
+        }
+    }
+
+    /**
+     * A two finger click on an iPad trackpad can arrive only as "contextmenu", without a right
+     * button mousedown. Treat that as a right click (delete, cancel placement).
+     * @param {MouseEvent} event
+     */
+    onContextMenu(event) {
+        event.preventDefault();
+        if (performance.now() - (this.lastMouseDownTime ?? 0) < 500) {
+            return; // a real mouse button already handled it (or a Ctrl + click on a Mac)
+        }
+        const pos = new Vector(event.clientX, event.clientY);
+        this.root.app.mousePosition = pos;
+        this.downPreHandler.dispatch(pos, enumMouseButton.right);
+        this.upPostHandler.dispatch(pos);
     }
 
     /**

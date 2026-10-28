@@ -2,7 +2,7 @@
 import { Application } from "../application";
 /* typehints:end */
 
-import { IS_MOBILE } from "../core/config";
+import { IS_MOBILE, TOUCH_CONTROLS_KEY } from "../core/config";
 import { ExplainedResult } from "../core/explained_result";
 import { Logger } from "../core/logging";
 import { ReadWriteProxy } from "../core/read_write_proxy";
@@ -147,6 +147,22 @@ function initializeSettings() {
             magicValue: "auto-detect",
         }),
 
+        new EnumSetting("touchControls", {
+            options: ["auto", "on", "off"],
+            valueGetter: mode => mode,
+            textGetter: mode => T.settings.labels.touchControls.modes[mode],
+            category: enumCategories.userInterface,
+            restartRequired: true,
+            // The layout is decided before settings load (see config.ts), so keep a synchronous copy
+            changeCb: (app, mode) => {
+                try {
+                    localStorage.setItem(TOUCH_CONTROLS_KEY, mode);
+                } catch {
+                    // storage blocked: "auto" it is
+                }
+            },
+        }),
+
         new EnumSetting("uiScale", {
             options: uiScales.sort((a, b) => a.size - b.size),
             valueGetter: scale => scale.id,
@@ -246,6 +262,8 @@ function initializeSettings() {
                 (app, id) => app.updateAfterUiScaleChanged(),
         }),
 
+        new BoolSetting("scrollPansMap", enumCategories.advanced, (app, value) => {}),
+
         new EnumSetting("movementSpeed", {
             options: movementSpeeds.sort((a, b) => a.multiplier - b.multiplier),
             valueGetter: multiplier => multiplier.id,
@@ -313,6 +331,8 @@ class SettingsStorage {
         this.displayChunkBorders = false;
         this.pickMinerOnPatch = true;
         this.enableMousePan = !IS_MOBILE;
+        this.touchControls = "auto";
+        this.scrollPansMap = IS_MOBILE;
 
         this.enableColorBlindHelper = false;
 
@@ -546,7 +566,7 @@ export class ApplicationSettings extends ReadWriteProxy {
     }
 
     getCurrentVersion() {
-        return 32;
+        return 33;
     }
 
     /** @param {{settings: SettingsStorage, version: number}} data */
@@ -700,6 +720,12 @@ export class ApplicationSettings extends ReadWriteProxy {
 
         if (data.version < 32) {
             data.version = 32;
+        }
+
+        if (data.version < 33) {
+            data.settings.touchControls = "auto";
+            data.settings.scrollPansMap = IS_MOBILE;
+            data.version = 33;
         }
 
         // MODS

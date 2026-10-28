@@ -1038,6 +1038,20 @@ settings:
     newBadge: New!
 
     labels:
+        touchControls:
+            title: Touch controls
+            description: >-
+                On-screen buttons and finger gestures (tap to place, drag to draw, pinch to zoom). Automatic turns them on for phones and tablets. Keyboard, mouse and trackpad keep working either way.
+            modes:
+                auto: Automatic
+                on: "On"
+                off: "Off"
+
+        scrollPansMap:
+            title: Scroll to move
+            description: >-
+                Scrolling (two fingers on a trackpad) moves the map, and pinching zooms, like a maps app. When off, scrolling zooms. Ctrl + scroll always zooms.
+
         uiScale:
             title: Interface scale
             description: >-
