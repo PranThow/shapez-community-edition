@@ -90,6 +90,18 @@ Sign and install it with Feather, Sideloadly, AltStore or similar. Requires iOS 
     Hold, then drag for the straight belt planner or a box selection. Tap a building to pick or delete it.
     A quick two finger tap is "back". Select / Erase / Wires are on the left, context actions on the right.
 
+### Single HTML file
+
+`node html/build.mjs` packs the whole game into `build_output/shapez-ce-<version>.html` (about 100 MB).
+Double-click it, or serve its folder with `python3 -m http.server` and open it from any device.
+The same touch controls turn on for phones and tablets.
+
+-   `--music 96` re-encodes the music at another bitrate (default 128 kbps), `--music hq` keeps the
+    original files, `--music 0` leaves the music out. `--skip-web` reuses an existing `build/`.
+-   Saves go to the browser's IndexedDB for that page's address. A file opened by double-click and the
+    same file served over http (or a moved file, in Firefox) see different saves: move a game across
+    with the download button on the savegame and the Import button.
+
 ### Building with Docker
 
 You can build without installing Node, Java, or ffmpeg on the host. From the repo root, build the image and run a package task with a volume so output appears in `build_output/` on your machine:

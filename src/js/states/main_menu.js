@@ -14,6 +14,7 @@ import { HUDModalDialogs } from "../game/hud/parts/modal_dialogs";
 import { MODS } from "../mods/modloader";
 import { Savegame } from "../savegame/savegame";
 import { T } from "../translations";
+import { assetUrl } from "../core/asset_url";
 
 /**
  * @typedef {import("../savegame/savegame_typedefs").SavegameMetadata} SavegameMetadata
@@ -37,11 +38,11 @@ export class MainMenuState extends GameState {
             </div>
 
             <video autoplay muted loop playsinline class="fullscreenBackgroundVideo">
-                <source src="res/bg_render.webm" type="video/webm">
+                <source src="${assetUrl("res/bg_render.webm")}" type="video/webm">
             </video>
 
             <div class="logo">
-                <img src="res/logo.png" alt="shapez.io Logo"
+                <img src="${assetUrl("res/logo.png")}" alt="shapez.io Logo"
                     width="${Math.round((710 / 3) * this.app.getEffectiveUiScale())}"
                     height="${Math.round((180 / 3) * this.app.getEffectiveUiScale())}"
                 >
@@ -119,7 +120,7 @@ export class MainMenuState extends GameState {
 
                 <div class="author">
                     <a class="producerLink" href="https://tobspr.io" target="_blank" title="tobspr Games" rel="follow">
-                        <img src="res/logo-tobspr-games.svg" alt="tobspr Games"
+                        <img src="${assetUrl("res/logo-tobspr-games.svg")}" alt="tobspr Games"
                         height="${25 * 0.8 * this.app.getEffectiveUiScale()}"
                         width="${82 * 0.8 * this.app.getEffectiveUiScale()}"
                         >

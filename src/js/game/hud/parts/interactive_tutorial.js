@@ -18,6 +18,7 @@ import { GameRoot } from "../../root";
 import { THEME } from "../../theme";
 import { BaseHUDPart } from "../base_hud_part";
 import { DynamicDomAttach } from "../dynamic_dom_attach";
+import { assetUrl } from "../../../core/asset_url";
 
 // @todo: Make dictionary
 const tutorialsByLevel = [
@@ -189,7 +190,7 @@ export class HUDInteractiveTutorial extends BaseHUDPart {
         document.documentElement.setAttribute("data-tutorial-step", hintId);
 
         this.elementGif.style.backgroundImage =
-            "url('res/ui/interactive_tutorial.noinline/" + hintId + ".gif')";
+            "url('" + assetUrl("res/ui/interactive_tutorial.noinline/" + hintId + ".gif") + "')";
         this.element.classList.toggle("animEven");
         this.element.classList.toggle("animOdd");
         if (hintId) {

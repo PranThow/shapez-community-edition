@@ -9,7 +9,7 @@
 import { IS_IOS_APP } from "../core/config";
 import { GLOBAL_APP } from "../core/globals";
 
-// @ts-ignore
+// @ts-expect-error only exists inside WKWebView
 const handlers = window.webkit?.messageHandlers;
 
 /**
@@ -36,25 +36,15 @@ export function haptic(style = "light") {
 
 /** @param {Uint8Array} bytes */
 function toBase64(bytes) {
-    // @ts-ignore Safari 18.2+
-    if (bytes.toBase64) {
-        // @ts-ignore
-        return bytes.toBase64();
-    }
     let binary = "";
     for (let i = 0; i < bytes.length; i += 0x8000) {
-        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+        binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
     }
     return btoa(binary);
 }
 
 /** @param {string} text */
 function fromBase64(text) {
-    // @ts-ignore Safari 18.2+
-    if (Uint8Array.fromBase64) {
-        // @ts-ignore
-        return Uint8Array.fromBase64(text);
-    }
     const binary = atob(text);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; ++i) {
@@ -64,25 +54,7 @@ function fromBase64(text) {
 }
 
 if (IS_IOS_APP) {
-    // Polyfills for iOS 16 / 17.0-17.3 WebKit
-    // @ts-ignore
-    Promise.withResolvers ??= function () {
-        let resolve, reject;
-        const promise = new Promise((a, b) => {
-            resolve = a;
-            reject = b;
-        });
-        return { promise, resolve, reject };
-    };
-    if (!crypto.randomUUID) {
-        // @ts-ignore
-        crypto.randomUUID = () =>
-            "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
-                (+c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (+c / 4)))).toString(16)
-            );
-    }
-
-    // @ts-ignore
+    // @ts-expect-error not declared on Window
     window.ipcRenderer = {
         async invoke(channel, payload) {
             switch (channel) {
@@ -97,7 +69,7 @@ if (IS_IOS_APP) {
                     } catch (err) {
                         // Same shape as Electron's error so FsError can parse the code (ENOENT etc.)
                         throw new Error(
-                            `Error invoking remote method 'fs-job': Error: ${err.message ?? err}`
+                            `Error invoking remote method 'fs-job': Error: ${err instanceof Error ? err.message : err}`
                         );
                     }
                     if ((job.type === "read" || job.type === "open-external") && typeof result === "string") {
@@ -117,12 +89,12 @@ if (IS_IOS_APP) {
     };
 
     // Called by the native side (callAsyncJavaScript) when the app is about to be suspended.
-    // @ts-ignore
+    // @ts-expect-error called by the native app
     window.shapezIOS = {
         async onBackground() {
             const state = GLOBAL_APP?.stateMgr?.getCurrentState();
             if (state && state.key === "InGameState") {
-                // @ts-ignore
+                // @ts-expect-error doSave only exists on InGameState
                 await state.doSave();
                 return "saved";
             }

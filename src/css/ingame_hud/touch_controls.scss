@@ -249,8 +249,10 @@ html.touch {
     }
 }
 
-// iOS: the canvas runs edge to edge under the notch, everything else stays in the safe area
-html.p-ios {
+// Notched phones (the iOS app, or a phone browser): the canvas runs edge to edge under the
+// notch, everything else stays in the safe area
+html.p-ios,
+html.touch {
     body {
         position: fixed;
         top: env(safe-area-inset-top);
@@ -272,11 +274,15 @@ html.p-ios {
         position: absolute;
     }
 
-    .exitAppButton {
-        display: none !important;
-    }
-
     &[data-theme="dark"] {
         background: $darkModeGameBackground;
+    }
+}
+
+// Only Electron can close itself
+html.p-ios,
+html.p-web {
+    .exitAppButton {
+        display: none !important;
     }
 }

@@ -10,6 +10,7 @@ import { Loader } from "./loader";
 import { Logger } from "./logging";
 import { Signal } from "./signal";
 import { clamp, timeoutPromise } from "./utils";
+import { assetUrl } from "./asset_url";
 
 const logger = new Logger("background_loader");
 
@@ -172,6 +173,11 @@ export class BackgroundResourcesLoader {
     }
 
     preloadWithProgress(src, progressHandler) {
+        const embedded = assetUrl(src);
+        if (embedded !== src) {
+            progressHandler(1);
+            return Promise.resolve(embedded);
+        }
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
 

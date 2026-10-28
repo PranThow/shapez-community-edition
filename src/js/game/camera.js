@@ -1,6 +1,5 @@
 import { clickDetectorGlobals } from "../core/click_detector";
 import { globalConfig, IS_MOBILE } from "../core/config";
-import { Logger } from "../core/logging";
 import { Rectangle } from "../core/rectangle";
 import { Signal, STOP_PROPAGATION } from "../core/signal";
 import { clamp } from "../core/utils";
@@ -8,8 +7,6 @@ import { mixVector, Vector } from "../core/vector";
 import { BasicSerializableObject, types } from "../savegame/serialization";
 import { KEYMAPPINGS } from "./key_action_mapper";
 import { GameRoot } from "./root";
-
-const logger = new Logger("camera");
 
 // @TODO: unused signal
 export const USER_INTERACT_MOVE = "move";

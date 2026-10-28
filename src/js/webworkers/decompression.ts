@@ -7,7 +7,8 @@ if (!(typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalSc
 import { decodeAsync } from "@msgpack/msgpack";
 
 async function decompress(data: Uint8Array): Promise<unknown> {
-    const input = new Blob([data]).stream();
+    // Response, not Blob.stream(): WebKit fails to read Blobs inside a blob: worker of a file:// page
+    const input = new Response(data).body!;
     const gunzip = new DecompressionStream("gzip");
 
     return await decodeAsync(input.pipeThrough(gunzip));

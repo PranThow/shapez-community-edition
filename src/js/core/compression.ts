@@ -10,12 +10,12 @@ type CompressionWorkerResponse<T> = { result: T; error: null } | { result: null;
 // Same as the workers do. Used when a worker cannot start at all (e.g. a WebView that
 // refuses worker scripts from its custom scheme), so saving never depends on workers.
 async function compressOnMainThread(data: unknown): Promise<Uint8Array> {
-    const gzip = new Blob([encode(data)]).stream().pipeThrough(new CompressionStream("gzip"));
+    const gzip = new Response(encode(data)).body!.pipeThrough(new CompressionStream("gzip"));
     return new Uint8Array(await new Response(gzip).arrayBuffer());
 }
 
 async function decompressOnMainThread(data: Uint8Array): Promise<unknown> {
-    return await decodeAsync(new Blob([data]).stream().pipeThrough(new DecompressionStream("gzip")));
+    return await decodeAsync(new Response(data).body!.pipeThrough(new DecompressionStream("gzip")));
 }
 
 let workersBroken = false;

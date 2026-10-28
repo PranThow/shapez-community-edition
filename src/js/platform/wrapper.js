@@ -2,7 +2,7 @@
 import { Application } from "../application";
 /* typehints:end */
 
-import { IS_IOS_APP, IS_MOBILE } from "../core/config";
+import { IS_ELECTRON, IS_IOS_APP, IS_MOBILE, IS_WEB } from "../core/config";
 import { nativePost } from "./ios";
 import { Logger } from "../core/logging";
 import { clamp } from "../core/utils";
@@ -22,7 +22,7 @@ export class PlatformWrapperImplElectron {
     }
 
     getId() {
-        return IS_IOS_APP ? "ios" : "electron";
+        return IS_IOS_APP ? "ios" : IS_WEB ? "web" : "electron";
     }
 
     getSupportsRestart() {
@@ -37,6 +37,10 @@ export class PlatformWrapperImplElectron {
         logger.log(this, "Opening external:", url);
         if (IS_IOS_APP) {
             nativePost({ type: "openURL", url });
+            return;
+        }
+        if (IS_WEB) {
+            window.open(url, "_blank", "noopener");
             return;
         }
         location.replace(url);
@@ -71,7 +75,7 @@ export class PlatformWrapperImplElectron {
      * Returns whether this platform supports a toggleable fullscreen
      */
     getSupportsFullscreen() {
-        return !IS_IOS_APP;
+        return IS_ELECTRON;
     }
 
     /**
@@ -83,7 +87,7 @@ export class PlatformWrapperImplElectron {
     }
 
     getSupportsAppExit() {
-        return !IS_IOS_APP;
+        return IS_ELECTRON;
     }
 
     /**

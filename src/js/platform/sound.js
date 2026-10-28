@@ -9,8 +9,12 @@ import { clamp, newEmptyMap } from "../core/utils";
 
 // @ts-ignore
 import sprites from "../built-temp/sfx.json";
+import { assetUrl } from "../core/asset_url";
 
 const logger = new Logger("sound");
+
+// Events that grant a user activation (for starting audio) in every engine
+const UNLOCK_EVENTS = ["click", "touchend", "keydown"];
 
 export const SOUNDS = {
     // Menu and such
@@ -276,7 +280,8 @@ class SoundSpritesContainer {
         }
         return (this.loadingPromise = new Promise(resolve => {
             this.howl = new Howl({
-                src: "res/sounds/sfx.mp3",
+                src: assetUrl("res/sounds/sfx.mp3"),
+                format: ["mp3"], // blob: URLs have no extension to sniff
                 sprite: sprites.sprite,
                 autoplay: false,
                 loop: false,
@@ -341,56 +346,31 @@ class WrappedSoundInstance extends SoundInstanceInterface {
 class MusicInstance extends MusicInstanceInterface {
     constructor(key, url) {
         super(key, url);
-        this.howl = null;
-        this.instance = null;
+        /** @type {HTMLAudioElement} */
+        this.audio = null;
         this.playing = false;
     }
+
+    /**
+     * A plain media element rather than Howler: it streams on demand and loops natively.
+     * Howler reads the duration once when the track becomes playable, and WebKit can still
+     * report 0 for long tracks then, after which Howler never plays them. Nothing to wait for
+     * here either (iOS Safari would not even start loading before the first tap).
+     */
     load() {
-        return new Promise((resolve, reject) => {
-            this.howl = new Howl({
-                src: "res/sounds/music/" + this.url + ".mp3",
-                autoplay: false,
-                loop: true,
-                html5: true,
-                volume: 1,
-                preload: true,
-                pool: 2,
-
-                onunlock: () => {
-                    if (this.playing) {
-                        logger.log("Playing music after manual unlock");
-                        this.play();
-                    }
-                },
-
-                onload: () => {
-                    if (!(this.howl.duration() > 0)) {
-                        // Howler loops a zero length track as play -> _ended -> play, which
-                        // recurses until the stack overflows and takes the main menu down with it
-                        logger.warn(this, "Music", this.url, "reported no duration, skipping it");
-                        this.howl.unload();
-                        this.howl = null;
-                    }
-                    resolve();
-                },
-                onloaderror: (id, err) => {
-                    logger.warn(this, "Music", this.url, "failed to load:", id, err);
-                    this.howl = null;
-                    resolve();
-                },
-
-                onplayerror: (id, err) => {
-                    logger.warn(this, "Music", this.url, "failed to play:", id, err);
-                },
-            });
-        });
+        if (!this.audio) {
+            this.audio = new Audio(assetUrl("res/sounds/music/" + this.url + ".mp3"));
+            this.audio.loop = true;
+            this.audio.addEventListener("error", () =>
+                logger.warn(this, "Music", this.url, "failed to load:", this.audio.error?.code)
+            );
+        }
+        return Promise.resolve();
     }
 
     stop() {
-        if (this.howl && this.instance) {
-            this.playing = false;
-            this.howl.pause(this.instance);
-        }
+        this.playing = false;
+        this.audio?.pause();
     }
 
     isPlaying() {
@@ -398,29 +378,42 @@ class MusicInstance extends MusicInstanceInterface {
     }
 
     play(volume) {
-        if (this.howl) {
-            this.playing = true;
-            this.howl.volume(volume);
-            if (this.instance) {
-                this.howl.play(this.instance);
-            } else {
-                this.instance = this.howl.play();
-            }
+        if (!this.audio) {
+            return;
         }
+        this.playing = true;
+        this.setVolume(volume);
+        this.audio.play().catch(err => {
+            if (err.name !== "NotAllowedError") {
+                logger.warn(this, "Music", this.url, "failed to play:", err);
+                return;
+            }
+            // Autoplay is blocked until the first click, tap or key press
+            const retry = () => {
+                for (const type of UNLOCK_EVENTS) {
+                    document.removeEventListener(type, retry, true);
+                }
+                if (this.playing) {
+                    this.audio.play().catch(() => null);
+                }
+            };
+            for (const type of UNLOCK_EVENTS) {
+                document.addEventListener(type, retry, true);
+            }
+        });
     }
 
     setVolume(volume) {
-        if (this.howl) {
-            this.howl.volume(volume);
+        if (this.audio) {
+            this.audio.volume = volume;
+            // iOS ignores the volume of media elements, muting at least makes "off" work there
+            this.audio.muted = volume <= 0;
         }
     }
 
     deinitialize() {
-        if (this.howl) {
-            this.howl.unload();
-            this.howl = null;
-            this.instance = null;
-        }
+        this.stop();
+        this.audio = null;
     }
 }
 

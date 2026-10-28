@@ -84,7 +84,15 @@ export const globalConfig = {
 
 // The iOS wrapper registers this handler before any page script runs
 export const IS_IOS_APP = Boolean((window as any).webkit?.messageHandlers?.shapezIpc);
-export const IS_MOBILE = IS_IOS_APP || Boolean((navigator as any).userAgentData?.mobile);
+// Electron's preload exposes ipcRenderer before any page script runs
+export const IS_ELECTRON = !IS_IOS_APP && typeof (window as any).ipcRenderer !== "undefined";
+// Plain browser: the single-file HTML build or any static web server
+export const IS_WEB = !IS_IOS_APP && !IS_ELECTRON;
+export const IS_MOBILE =
+    IS_IOS_APP ||
+    Boolean((navigator as any).userAgentData?.mobile) ||
+    // Phones and tablets in a browser (an iPad with a trackpad attached keeps the desktop controls)
+    matchMedia("(hover: none) and (pointer: coarse)").matches;
 export const SUPPORT_TOUCH = IS_MOBILE;
 
 // Automatic calculations

@@ -99,15 +99,12 @@ export class HUDTouchControls extends BaseHUDPart {
         this.createButtons();
 
         const canvas = this.root.canvas;
-        this.listeners = {
-            touchstart: this.onTouchStart.bind(this),
-            touchmove: this.onTouchMove.bind(this),
-            touchend: ev => this.onTouchEnd(ev, false),
-            touchcancel: ev => this.onTouchEnd(ev, true),
-        };
-        for (const [type, fn] of Object.entries(this.listeners)) {
-            canvas.addEventListener(type, fn, { passive: false });
-        }
+        this.listenerScope = new AbortController();
+        const options = { passive: false, signal: this.listenerScope.signal };
+        canvas.addEventListener("touchstart", ev => this.onTouchStart(ev), options);
+        canvas.addEventListener("touchmove", ev => this.onTouchMove(ev), options);
+        canvas.addEventListener("touchend", ev => this.onTouchEnd(ev, false), options);
+        canvas.addEventListener("touchcancel", ev => this.onTouchEnd(ev, true), options);
 
         this.root.signals.entityManuallyPlaced.add(entity => {
             this.lastPlaced = entity;
@@ -134,9 +131,7 @@ export class HUDTouchControls extends BaseHUDPart {
     cleanup() {
         super.cleanup();
         this.cleanupPillDetectors();
-        for (const [type, fn] of Object.entries(this.listeners)) {
-            this.root.canvas.removeEventListener(type, fn);
-        }
+        this.listenerScope.abort();
         clearTimeout(this.longPressTimer);
         clearTimeout(this.hintTimer);
     }
@@ -667,7 +662,7 @@ export class HUDTouchControls extends BaseHUDPart {
     /** @param {Vector} tile */
     blueprintContains(tile) {
         const anchor = this.blueprintCursor.toTileSpace();
-        // @ts-ignore private in TS, fine to read
+        // @ts-expect-error private in TS, fine to read
         return this.blueprint.entities.some(entity =>
             entity.components.StaticMapEntity.getTileSpaceBounds().containsPoint(
                 tile.x - anchor.x + 0.5,
@@ -692,7 +687,8 @@ export class HUDTouchControls extends BaseHUDPart {
 
         /**
          * @type {Array<{ id: string, icon: string, label: string, column: HTMLElement, cls?: string,
-         *  sound?: boolean, visible: (s: any) => boolean, active?: (s: any) => boolean, run: () => void }>}
+         *  sound?: boolean, visible: (s: any) => boolean, active?: (s: any) => boolean, run: () => void,
+         *  element?: HTMLElement }>}
          */
         this.buttons = [
             {

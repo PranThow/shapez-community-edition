@@ -7,6 +7,7 @@ import { Logger } from "../core/logging";
 import { getRandomHint } from "../game/hints";
 import { HUDModalDialogs } from "../game/hud/parts/modal_dialogs";
 import { T, autoDetectLanguageId, updateApplicationLanguage } from "../translations";
+import { assetUrl } from "../core/asset_url";
 
 const logger = new Logger("state/preload");
 
@@ -229,7 +230,7 @@ export class PreloadState extends GameState {
 
         subElement.innerHTML = `
                 <div class="logo">
-                    <img src="res/logo.png" alt="Shapez.io Logo">
+                    <img src="${assetUrl("res/logo.png")}" alt="Shapez.io Logo">
                 </div>
                 <div class="failureInner">
                     <div class="errorHeader">
