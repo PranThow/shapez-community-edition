@@ -313,9 +313,13 @@ export class Camera extends BasicSerializableObject {
         // click may only arrive as "contextmenu". Removed together in cleanup().
         this.trackpadListeners = new AbortController();
         const options = { signal: this.trackpadListeners.signal };
-        this.root.canvas.addEventListener("gesturestart", ev => this.onGesture(ev, "start"), options);
-        this.root.canvas.addEventListener("gesturechange", ev => this.onGesture(ev, "change"), options);
-        this.root.canvas.addEventListener("gestureend", ev => this.onGesture(ev, "end"), options);
+        // On the window, not the canvas: the pinch can target whatever HUD element is under the
+        // pointer (or the document). Not passive, so the page itself never zooms.
+        const pinchOptions = { ...options, capture: true, passive: false };
+        window.addEventListener("gesturestart", ev => this.onGesture(ev, "start"), pinchOptions);
+        window.addEventListener("gesturechange", ev => this.onGesture(ev, "change"), pinchOptions);
+        window.addEventListener("gestureend", ev => this.onGesture(ev, "end"), pinchOptions);
+        window.addEventListener("wheel", ev => this.onPinchWheel(ev), pinchOptions);
         this.root.canvas.addEventListener("contextmenu", ev => this.onContextMenu(ev), options);
     }
 
@@ -502,19 +506,6 @@ export class Camera extends BasicSerializableObject {
             // event.stopPropagation();
         }
 
-        if (event.ctrlKey) {
-            // A trackpad pinch (Chrome, Edge, Firefox) or Ctrl + wheel. Safari sends gesture
-            // events for the pinch instead, so skip while one runs.
-            if (!this.gestureStartZoom) {
-                const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
-                this.zoomAround(
-                    this.root.app.mousePosition,
-                    this.zoomLevel * Math.exp(-clamp(pixels, -50, 50) * 0.01)
-                );
-            }
-            return false;
-        }
-
         if (this.root.app.settings.getAllSettings().scrollPansMap) {
             // Two finger scroll moves the map like a page; lines/pages for wheels that report them
             const unit = [1, 16, this.root.gameHeight][event.deltaMode] ?? 1;
@@ -584,11 +575,38 @@ export class Camera extends BasicSerializableObject {
         }
         if (phase === "start") {
             this.gestureStartZoom = this.zoomLevel;
-        } else if (phase === "change" && this.gestureStartZoom) {
-            this.zoomAround(new Vector(event.clientX, event.clientY), this.gestureStartZoom * event.scale);
-        } else {
+        } else if (phase === "change" && this.gestureStartZoom && Number.isFinite(event.scale)) {
+            // Not every Safari puts a position on gesture events
+            const at = Number.isFinite(event.clientX)
+                ? new Vector(event.clientX, event.clientY)
+                : this.root.app.mousePosition;
+            this.zoomAround(at, this.gestureStartZoom * event.scale);
+        } else if (phase === "end") {
             this.gestureStartZoom = null;
         }
+    }
+
+    /**
+     * A trackpad pinch as Chrome, Edge, Firefox and newer Safari send it (wheel + ctrlKey), or
+     * Ctrl + mouse wheel. Caught on the window for the same reason as the gesture events.
+     * @param {WheelEvent} event
+     */
+    onPinchWheel(event) {
+        if (!event.ctrlKey) {
+            return; // plain scrolling is the canvas' business
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        if (this.gestureStartZoom) {
+            return; // Safari also sent gesture events for this pinch
+        }
+        const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
+        this.zoomAround(
+            Number.isFinite(event.clientX)
+                ? new Vector(event.clientX, event.clientY)
+                : this.root.app.mousePosition,
+            this.zoomLevel * Math.exp(-clamp(pixels, -50, 50) * 0.01)
+        );
     }
 
     /**
