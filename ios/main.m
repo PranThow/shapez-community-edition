@@ -3,7 +3,7 @@
 //  - Serves www/ through the shapez://localhost scheme (a secure context, so crypto.randomUUID,
 //    workers and the clipboard work) with byte-range support for streamed <audio> music.
 //  - shapezIpc (with reply) implements the Electron "fs-job" contract: saves live in
-//    Documents/saves, which the Files app shows under "On My iPhone".
+//    Documents/saves and mods in Documents/mods, which the Files app shows under "On My iPhone".
 //  - shapezNative: haptics and opening links in Safari.
 //  - Saves the game whenever the app leaves the foreground.
 
@@ -193,7 +193,7 @@ static NSString *MimeType(NSString *ext) {
 
 @interface SZBridge : NSObject <WKScriptMessageHandlerWithReply, WKScriptMessageHandler, UIDocumentPickerDelegate>
 @property(nonatomic, weak) UIViewController *presenter;
-@property(nonatomic, strong) NSURL *savesDir;
+@property(nonatomic, strong) NSURL *docsDir;
 @property(nonatomic, strong) dispatch_queue_t io;
 @property(nonatomic, copy) void (^pickerReply)(id result, NSString *error);
 @property(nonatomic, assign) BOOL pickerIsOpen; // open vs. save picker
@@ -207,7 +207,7 @@ static NSString *MimeType(NSString *ext) {
 - (instancetype)init {
     if ((self = [super init])) {
         NSURL *docs = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
-        _savesDir = [docs URLByAppendingPathComponent:@"saves" isDirectory:YES];
+        _docsDir = docs;
         _io = dispatch_queue_create("shapez.saves", DISPATCH_QUEUE_SERIAL);
         _light = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
         _medium = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
@@ -218,8 +218,14 @@ static NSString *MimeType(NSString *ext) {
     return self;
 }
 
+// Storage id -> folder in Documents (visible in the Files app). Only known ids, like Electron.
+- (NSURL *)dirFor:(NSString *)storageId {
+    NSString *sub = [storageId isEqualToString:@"mods"] ? @"mods" : @"saves";
+    return [self.docsDir URLByAppendingPathComponent:sub isDirectory:YES];
+}
+
 // Same sanitising as electron/src/fsjob.ts
-- (NSURL *)fileFor:(NSString *)name {
+- (NSURL *)fileFor:(NSString *)name in:(NSURL *)dir {
     NSRegularExpression *unsafe = [NSRegularExpression regularExpressionWithPattern:@"[^a-z.0-9_-]"
                                                                             options:NSRegularExpressionCaseInsensitive
                                                                               error:nil];
@@ -230,7 +236,7 @@ static NSString *MimeType(NSString *ext) {
     if (safe.length == 0 || [safe isEqualToString:@"."] || [safe isEqualToString:@".."]) {
         safe = @"_";
     }
-    return [self.savesDir URLByAppendingPathComponent:safe isDirectory:NO];
+    return [dir URLByAppendingPathComponent:safe isDirectory:NO];
 }
 
 static NSString *ErrorText(NSError *error, NSString *name) {
@@ -266,29 +272,30 @@ static NSString *ErrorText(NSError *error, NSString *name) {
         return;
     }
 
+    NSURL *dir = [self dirFor:[job[@"id"] isKindOfClass:NSString.class] ? job[@"id"] : @"saves"];
     dispatch_async(self.io, ^{
       NSFileManager *fm = NSFileManager.defaultManager;
       NSError *error = nil;
-      [fm createDirectoryAtURL:self.savesDir withIntermediateDirectories:YES attributes:nil error:nil];
+      [fm createDirectoryAtURL:dir withIntermediateDirectories:YES attributes:nil error:nil];
 
       if ([type isEqualToString:@"initialize"]) {
           reply(nil, nil);
       } else if ([type isEqualToString:@"read"]) {
-          NSData *data = [NSData dataWithContentsOfURL:[self fileFor:name] options:0 error:&error];
+          NSData *data = [NSData dataWithContentsOfURL:[self fileFor:name in:dir] options:0 error:&error];
           data ? reply([data base64EncodedStringWithOptions:0], nil) : reply(nil, ErrorText(error, name));
       } else if ([type isEqualToString:@"write"]) {
           NSData *data = [[NSData alloc] initWithBase64EncodedString:job[@"contents"] ?: @"" options:0];
           if (!data) {
               reply(nil, [NSString stringWithFormat:@"EINVAL: invalid contents, '%@'", name]);
-          } else if ([data writeToURL:[self fileFor:name] options:NSDataWritingAtomic error:&error]) {
+          } else if ([data writeToURL:[self fileFor:name in:dir] options:NSDataWritingAtomic error:&error]) {
               reply(nil, nil);
           } else {
               reply(nil, ErrorText(error, name));
           }
       } else if ([type isEqualToString:@"delete"]) {
-          [fm removeItemAtURL:[self fileFor:name] error:&error] ? reply(nil, nil) : reply(nil, ErrorText(error, name));
+          [fm removeItemAtURL:[self fileFor:name in:dir] error:&error] ? reply(nil, nil) : reply(nil, ErrorText(error, name));
       } else if ([type isEqualToString:@"list"]) {
-          NSArray *names = [fm contentsOfDirectoryAtPath:self.savesDir.path error:&error];
+          NSArray *names = [fm contentsOfDirectoryAtPath:dir.path error:&error];
           names ? reply(names, nil) : reply(nil, ErrorText(error, name));
       } else {
           reply(nil, [NSString stringWithFormat:@"EINVAL: unknown fs job type %@", type]);
@@ -348,7 +355,7 @@ static NSString *ErrorText(NSError *error, NSString *name) {
 
 - (void)presentSavePicker:(NSString *)name contents:(NSString *)contents reply:(void (^)(id, NSString *))reply {
     NSData *data = [[NSData alloc] initWithBase64EncodedString:contents options:0];
-    NSString *safe = [[self fileFor:name] lastPathComponent];
+    NSString *safe = [[self fileFor:name in:self.docsDir] lastPathComponent];
     NSURL *tmp = [NSFileManager.defaultManager.temporaryDirectory URLByAppendingPathComponent:safe];
     if (!data || self.pickerReply || ![data writeToURL:tmp atomically:YES]) {
         reply(nil, nil);

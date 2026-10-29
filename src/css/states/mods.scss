@@ -44,3 +44,27 @@
         color: $accentColorDark;
     }
 }
+
+#state_ModsState {
+    .modsToolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .modsToolbar > .hint,
+    .mod > .error {
+        @include PlainText();
+    }
+
+    .mod > .error {
+        color: $colorRedBright;
+    }
+
+    .mod .removeMod {
+        margin-left: 1rem;
+        padding: 0.2rem 0.6rem;
+    }
+}

@@ -2,6 +2,8 @@ import { GLOBAL_APP } from "@/core/globals";
 import { SavegameStoredMods } from "@/savegame/savegame_typedefs";
 import { Logger } from "../core/logging";
 import { DisabledMod } from "./disabled_mod";
+import { ErroredMod } from "./errored_mod";
+import { isLoadedHere, listLocalModFiles, parseModFile, readLocalModFile } from "./local_mods";
 import { Mod, ModConstructor } from "./mod";
 import { ModInfo, ModMetadata, ModQueueEntry } from "./mod_metadata";
 import { MOD_SIGNALS } from "./mod_signals";
@@ -93,6 +95,46 @@ export class ModLoader {
             });
 
             await mod.init();
+        }
+
+        await this.initLocalMods();
+    }
+
+    /**
+     * Loads .js (shapez 1.5) and, without an Electron mod host, .asar mods from the mods storage.
+     * A broken mod is listed as errored instead of stopping the game from starting.
+     */
+    private async initLocalMods() {
+        for (const fileName of await listLocalModFiles()) {
+            if (!isLoadedHere(fileName)) {
+                continue;
+            }
+
+            let metadata: ModMetadata = {
+                id: fileName,
+                entry: fileName,
+                name: fileName,
+                authors: [],
+                version: "0",
+                savegameResident: false,
+            };
+            try {
+                const file = parseModFile(fileName, await readLocalModFile(fileName));
+                metadata = file.metadata;
+                if (this.mods.has(metadata.id)) {
+                    LOG.warn(`Ignoring ${fileName}: a mod with id ${metadata.id} is already loaded`);
+                    continue;
+                }
+
+                const mod = await file.create(this.app, this);
+                this.mods.set(mod.id, { source: "user", file: fileName, mod });
+                await mod.init();
+            } catch (err) {
+                LOG.error("Failed to load mod", fileName, err);
+                const errored = new ErroredMod(metadata, this.app, this);
+                errored.errors.push(err instanceof Error ? err : new Error(String(err)));
+                this.mods.set(fileName, { source: "user", file: fileName, mod: errored });
+            }
         }
     }
 

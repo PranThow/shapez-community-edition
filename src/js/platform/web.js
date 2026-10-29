@@ -118,7 +118,9 @@ if (IS_WEB) {
                         return Promise.resolve();
                     }
                     return getBackend().then(async storage => {
-                        const name = safeName(payload.filename);
+                        // Saves keep their bare keys; other storages (mods) get an "id/" prefix
+                        const prefix = payload.id && payload.id !== "saves" ? payload.id + "/" : "";
+                        const name = prefix + safeName(payload.filename);
                         switch (payload.type) {
                             case "initialize":
                                 return;
@@ -134,7 +136,9 @@ if (IS_WEB) {
                             case "delete":
                                 return storage.delete(name);
                             case "list":
-                                return storage.list();
+                                return (await storage.list())
+                                    .filter(key => (prefix ? key.startsWith(prefix) : !key.includes("/")))
+                                    .map(key => key.slice(prefix.length));
                         }
                         throw new Error("Unknown fs job type: " + payload.type);
                     });

@@ -1020,6 +1020,14 @@ mods:
     modsInfo: >-
         To install and manage mods, copy them to the mods folder (use the 'Open Mods Folder' button). Be sure to restart the game afterwards, otherwise the mods will not show up.
 
+    installMod: Install Mod
+    installHint: >-
+        Accepts shapez 1.5 mods (.js) and Community Edition mods (.asar). You can also copy them into the mods folder (Files app on iOS) and restart.
+    removeMod: Remove
+    installFailed: This isn't a mod the game can load
+    installed: <name> is installed. Restart to load it.
+    removed: <name> is removed. Restart to unload it.
+
 settings:
     title: Settings
     categories:

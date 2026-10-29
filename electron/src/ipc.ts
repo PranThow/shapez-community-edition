@@ -3,7 +3,11 @@ import { FsJob, FsJobHandler } from "./fsjob.js";
 import { ModLoader } from "./mods/loader.js";
 
 export class IpcHandler {
-    private readonly savesHandler = new FsJobHandler("saves");
+    private readonly fsHandlers = new Map([
+        ["saves", new FsJobHandler("saves")],
+        // Same folder the mod host loads .asar mods from; the game itself loads .js mods there
+        ["mods", new FsJobHandler("mods")],
+    ]);
     private readonly modLoader: ModLoader;
 
     constructor(modLoader: ModLoader) {
@@ -20,11 +24,12 @@ export class IpcHandler {
     }
 
     private handleFsJob(_event: IpcMainInvokeEvent, job: FsJob) {
-        if (job.id !== "saves") {
-            throw new Error("Storages other than saves/ are not implemented yet");
+        const handler = this.fsHandlers.get(job.id);
+        if (handler === undefined) {
+            throw new Error(`Storage ${job.id}/ is not implemented`);
         }
 
-        return this.savesHandler.handleJob(job);
+        return handler.handleJob(job);
     }
 
     private async getMods() {
