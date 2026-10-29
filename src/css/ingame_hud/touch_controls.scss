@@ -277,6 +277,17 @@ html.touch {
     &[data-theme="dark"] {
         background: $darkModeGameBackground;
     }
+
+    // Full screen layers that live inside body would stop at the safe area and leave a pale
+    // frame around the screen: let them run edge to edge like the canvas
+    #ingame_VignetteOverlay,
+    #state_MainMenuState::after {
+        position: fixed;
+    }
+
+    &:not([data-theme="dark"]):has(body#state_MainMenuState) {
+        background: #bbc2cf;
+    }
 }
 
 // Only Electron can close itself
